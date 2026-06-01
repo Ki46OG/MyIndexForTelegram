@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MasedWorld Shop</title>
+    <!-- Подключаем SDK Телеграма и стили Tailwind CSS -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            background-color: var(--tg-theme-bg-color, #1a1a1a);
+            color: var(--tg-theme-text-color, #ffffff);
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <!-- Шапка приложения -->
+    <div class="text-center mb-6">
+        <h1 class="text-2xl font-black text-amber-500 uppercase tracking-wider">MasedWorld Store</h1>
+        <p class="text-xs text-gray-400 mt-1">Официальный сайт: <span class="text-blue-400">masedworld.net</span></p>
+        <div class="inline-block bg-red-500/20 text-red-400 border border-red-500/30 text-[11px] font-bold px-2.5 py-1 rounded-full mt-2 animate-pulse">
+            🔥 СКИДКА -20% НА ВСЁ
+        </div>
+    </div>
+
+    <!-- Список товаров -->
+    <div id="products-grid" class="grid grid-cols-2 gap-3 mb-24">
+        <!-- Карточки генерируются скриптом ниже -->
+    </div>
+
+    <!-- Всплывающее окно выбора оплаты -->
+    <div id="payment-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 space-y-4">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
+                <h3 id="modal-title" class="font-bold text-lg text-amber-400"></h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-400">Выберите удобный способ оплаты:</p>
+            
+            <div class="space-y-2">
+                <button onclick="selectPayment('stars')" class="w-full bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold py-3 px-4 rounded-xl flex justify-between items-center transition">
+                    <span>⭐️ Telegram Stars</span>
+                    <span id="rate-stars" class="text-xs opacity-80"></span>
+                </button>
+                <button onclick="selectPayment('ton')" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-xl flex justify-between items-center transition">
+                    <span>💎 TON Crypto</span>
+                    <span id="rate-ton" class="text-xs opacity-80"></span>
+                </button>
+                <button onclick="selectPayment('fipay')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-xl flex justify-between items-center transition">
+                    <span>💳 FiPay Merchant</span>
+                    <span id="rate-fipay" class="text-xs opacity-80"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем приложение на весь экран
+
+        // База данных товаров (Цены указаны уже с вычетом 20%)
+        const products = [
+            { id: "vip", name: "VIP", old: 150, price: 120, stars: 60, ton: 0.2 },
+            { id: "premium", name: "Premium", old: 300, price: 240, stars: 120, ton: 0.4 },
+            { id: "creative", name: "Креатив", old: 450, price: 360, stars: 180, ton: 0.6 },
+            { id: "admin", name: "Админ", old: 600, price: 480, stars: 240, ton: 0.8 },
+            { id: "marshal", name: "Маршал", old: 1100, price: 880, stars: 440, ton: 1.5 },
+            { id: "creator", name: "Создатель", old: 1500, price: 1200, stars: 600, ton: 2.0 },
+            { id: "console", name: "Консоль", old: 5000, price: 4000, stars: 2000, ton: 6.5 }
+        ];
+
+        let selectedProduct = null;
+
+        // Рендер карточек товаров
+        const grid = document.getElementById('products-grid');
+        products.forEach(p => {
+            grid.innerHTML += `
+                <div class="bg-zinc-900 border border-zinc-800/80 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+                    <div>
+                        <div class="text-xs text-amber-500 font-bold uppercase tracking-wider">Ранг</div>
+                        <h2 class="text-base font-black truncate">${p.name}</h2>
+                    </div>
+                    <div class="mt-4">
+                        <span class="text-xs text-gray-500 line-through">${p.old}₽</span>
+                        <div class="text-lg font-extrabold text-green-400">${p.price}₽</div>
+                        <button onclick="openModal('${p.id}')" class="w-full mt-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 rounded-lg text-xs transition">
+                            Купить
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        function openModal(id) {
+            selectedProduct = products.find(p => p.id === id);
+            document.getElementById('modal-title').innerText = `Купить ${selectedProduct.name}`;
+            document.getElementById('rate-stars').innerText = `${selectedProduct.stars} ⭐️`;
+            document.getElementById('rate-ton').innerText = `${selectedProduct.ton} TON`;
+            document.getElementById('rate-fipay').innerText = `${selectedProduct.price} ₽`;
+            document.getElementById('payment-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('payment-modal').classList.add('hidden');
+        }
+
+        // Отправка данных обратно в Telegram бот
+        function selectPayment(method) {
+            const orderData = {
+                product_id: selectedProduct.id,
+                product_name: selectedProduct.name,
+                price_rub: selectedProduct.price,
+                stars: selectedProduct.stars,
+                ton: selectedProduct.ton,
+                payment_method: method
+            };
+            
+            // Метод отправляет JSON-строку в бот и закрывает Mini App
+            tg.sendData(JSON.stringify(orderData));
+            closeModal();
+        }
+    </script>
+</body>
+</html>
